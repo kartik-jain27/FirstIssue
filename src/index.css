@@ -13,47 +13,63 @@
     color-scheme: dark;
   }
 
+  html,
+  body,
+  #root {
+    transition: background-color 0.4s ease, color 0.3s ease;
+  }
+
   body {
     min-width: 320px;
   }
 
-  body,
   body * {
-    transition-property: background-color, border-color, color, fill, stroke, box-shadow, opacity;
-    transition-duration: 220ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: 300ms;
+    transition-timing-function: ease;
   }
 
-  .theme-transition::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    pointer-events: none;
-    background: radial-gradient(circle at top right, rgb(99 102 241 / 0.16), transparent 38%), rgb(15 23 42 / 0.08);
-    animation: theme-fade 520ms ease both;
-  }
-
-  @keyframes theme-fade {
-    from {
+  @keyframes bulbFlicker {
+    0% {
       opacity: 1;
     }
-    to {
-      opacity: 0;
+    15% {
+      opacity: 0.3;
     }
+    30% {
+      opacity: 1;
+    }
+    45% {
+      opacity: 0.5;
+    }
+    60% {
+      opacity: 1;
+    }
+    75% {
+      opacity: 0.7;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .theme-flicker {
+    animation: bulbFlicker 0.4s ease;
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html,
     body,
+    #root,
     body * {
       transition-duration: 0ms;
     }
 
-    .theme-transition::before {
+    .theme-flicker {
       animation: none;
-      opacity: 0;
     }
   }
+
 }
 
 @layer components {
