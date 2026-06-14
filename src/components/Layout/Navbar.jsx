@@ -1,11 +1,13 @@
-import { Github, Moon, SearchCode, Sun } from 'lucide-react';
+import { Bookmark, Github, Moon, SearchCode, Sun } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { BOOKMARKS_CHANGED_EVENT, getBookmarkCount } from '../../utils/bookmarks.js';
 
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/stats', label: 'Stats' },
-  { to: '/about', label: 'About' }
+  { to: '/about', label: 'About' },
+  { to: '/bookmarks', label: 'Bookmarks' }
 ];
 
 /**
@@ -15,6 +17,20 @@ const navLinks = [
 export default function Navbar() {
   const initialRender = useRef(true);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [bookmarkCount, setBookmarkCount] = useState(() => getBookmarkCount());
+
+  useEffect(() => {
+    function syncBookmarkCount() {
+      setBookmarkCount(getBookmarkCount());
+    }
+
+    window.addEventListener(BOOKMARKS_CHANGED_EVENT, syncBookmarkCount);
+    window.addEventListener('storage', syncBookmarkCount);
+    return () => {
+      window.removeEventListener(BOOKMARKS_CHANGED_EVENT, syncBookmarkCount);
+      window.removeEventListener('storage', syncBookmarkCount);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -53,7 +69,15 @@ export default function Navbar() {
                 }`
               }
             >
-              {link.label}
+              <span className="inline-flex items-center gap-2">
+                {link.to === '/bookmarks' && <Bookmark size={15} />}
+                {link.label}
+                {link.to === '/bookmarks' && bookmarkCount > 0 && (
+                  <span className="min-w-5 rounded-full bg-indigo-600 px-1.5 py-0.5 text-center text-[11px] font-extrabold text-white dark:bg-indigo-400 dark:text-slate-950">
+                    {bookmarkCount}
+                  </span>
+                )}
+              </span>
             </NavLink>
           ))}
         </div>
@@ -94,7 +118,13 @@ export default function Navbar() {
               }`
             }
           >
-            {link.label}
+            <span className="inline-flex items-center justify-center gap-1.5">
+              {link.to === '/bookmarks' && <Bookmark size={14} />}
+              {link.label}
+              {link.to === '/bookmarks' && bookmarkCount > 0 && (
+                <span className="min-w-5 rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-extrabold">{bookmarkCount}</span>
+              )}
+            </span>
           </NavLink>
         ))}
       </div>

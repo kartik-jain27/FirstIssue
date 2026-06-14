@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import Footer from './components/Layout/Footer.jsx';
 import Navbar from './components/Layout/Navbar.jsx';
 import AboutPage from './pages/AboutPage.jsx';
+import BookmarksPage from './pages/BookmarksPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import StatsPage from './pages/StatsPage.jsx';
 
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/bookmarks" element={<BookmarksPage />} />
         </Routes>
       </main>
       <Footer />

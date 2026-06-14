@@ -1,5 +1,6 @@
 import { Bookmark, ExternalLink, MessageCircle, Star } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { BOOKMARKS_CHANGED_EVENT, isIssueBookmarked, toggleBookmarkedIssue } from '../../utils/bookmarks.js';
 
 const languageColors = {
   JavaScript: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
@@ -49,14 +50,22 @@ function getRelativeDays(value) {
  * @returns {JSX.Element}
  */
 export default function IssueCard({ issue }) {
-  const bookmarkKey = `bookmarked-issue-${issue.githubId}`;
-  const [bookmarked, setBookmarked] = useState(() => localStorage.getItem(bookmarkKey) === 'true');
+  const [bookmarked, setBookmarked] = useState(() => isIssueBookmarked(issue));
   const scoreBucket = useMemo(() => Math.min(Math.max(Math.round(issue.activityScore || 0), 0), 10), [issue.activityScore]);
   const issueLabels = issue.labels || [];
 
   useEffect(() => {
-    localStorage.setItem(bookmarkKey, bookmarked ? 'true' : 'false');
-  }, [bookmarkKey, bookmarked]);
+    function syncBookmarkState() {
+      setBookmarked(isIssueBookmarked(issue));
+    }
+
+    window.addEventListener(BOOKMARKS_CHANGED_EVENT, syncBookmarkState);
+    window.addEventListener('storage', syncBookmarkState);
+    return () => {
+      window.removeEventListener(BOOKMARKS_CHANGED_EVENT, syncBookmarkState);
+      window.removeEventListener('storage', syncBookmarkState);
+    };
+  }, [issue]);
 
   return (
     <article className="surface flex h-full flex-col rounded-xl p-5 transition duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl dark:hover:border-indigo-800">
@@ -76,7 +85,7 @@ export default function IssueCard({ issue }) {
           </span>
           <button
             type="button"
-            onClick={() => setBookmarked((value) => !value)}
+            onClick={() => setBookmarked(toggleBookmarkedIssue(issue))}
             className="focus-ring rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-slate-800 dark:hover:text-indigo-300"
             aria-label="Bookmark issue"
             title="Bookmark issue"
