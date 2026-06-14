@@ -2,8 +2,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
-import psycopg2
-import psycopg2.extras
+import psycopg
 import requests
 
 from config import (
@@ -73,17 +72,24 @@ def fetch_search_results(session, owner, repo, label):
     page = 1
 
     while True:
-        payload = github_get(
-            session,
-            "/search/issues",
-            params={
-                "q": query,
-                "sort": "updated",
-                "order": "desc",
-                "per_page": SEARCH_PER_PAGE,
-                "page": page,
-            },
-        )
+        try:
+            payload = github_get(
+                session,
+                "/search/issues",
+                params={
+                    "q": query,
+                    "sort": "updated",
+                    "order": "desc",
+                    "per_page": SEARCH_PER_PAGE,
+                    "page": page,
+                },
+            )
+        except requests.HTTPError as error:
+            status_code = error.response.status_code if error.response is not None else None
+            if status_code == 422:
+                logger.warning("Skipping %s/%s label %r because GitHub rejected the search query.", owner, repo, label)
+                return
+            raise
 
         items = payload.get("items", [])
         for issue in items:
@@ -115,7 +121,9 @@ def upsert_issues(connection, issues):
           updated_at,
           activity_score,
           fetched_at
-        ) VALUES %s
+        ) VALUES (
+          %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+        )
         ON CONFLICT (github_id) DO UPDATE SET
           repo_name = EXCLUDED.repo_name,
           repo_url = EXCLUDED.repo_url,
@@ -151,7 +159,7 @@ def upsert_issues(connection, issues):
     ]
 
     with connection.cursor() as cursor:
-        psycopg2.extras.execute_values(cursor, sql, values, page_size=100)
+        cursor.executemany(sql, values)
 
     connection.commit()
     return len(issues)
@@ -161,7 +169,7 @@ def fetch_and_store_issues():
     session = build_session()
     total_upserted = 0
 
-    with psycopg2.connect(DATABASE_URL) as connection:
+    with psycopg.connect(DATABASE_URL) as connection:
         for target in TARGET_REPOSITORIES:
             owner = target["owner"]
             repo = target["repo"]
