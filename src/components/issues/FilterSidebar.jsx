@@ -1,4 +1,5 @@
-import { ChevronDown, Filter, SlidersHorizontal } from 'lucide-react';
+import { Check, ChevronDown, Filter, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 const languages = ['', 'JavaScript', 'Python', 'TypeScript', 'Go', 'Rust', 'Java', 'C++'];
 const labels = ['good first issue', 'help wanted', 'bug', 'documentation'];
@@ -7,6 +8,71 @@ const sorts = [
   { value: 'stars', label: 'Most Stars' },
   { value: 'recent', label: 'Recently Updated' }
 ];
+
+function LanguageDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+  const selectedLabel = value || 'All languages';
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="focus-ring flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-semibold text-slate-900 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:hover:border-indigo-800 dark:hover:bg-indigo-950/30"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span>{selectedLabel}</span>
+        <ChevronDown size={17} className={`text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-12 z-30 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+          <div role="listbox" className="max-h-64 overflow-y-auto">
+            {languages.map((language) => {
+              const label = language || 'All languages';
+              const selected = language === value;
+
+              return (
+                <button
+                  key={language || 'all'}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(language);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${
+                    selected
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>{label}</span>
+                  {selected && <Check size={16} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /**
  * Responsive issue filter controls.
@@ -28,17 +94,7 @@ export default function FilterSidebar({ filters, setFilter, toggleLabel }) {
         <div className="mt-5 space-y-6">
           <div>
             <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Language</label>
-            <select
-              value={filters.language}
-              onChange={(event) => setFilter('language', event.target.value)}
-              className="focus-ring h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-            >
-              {languages.map((language) => (
-                <option key={language || 'all'} value={language}>
-                  {language || 'All languages'}
-                </option>
-              ))}
-            </select>
+            <LanguageDropdown value={filters.language} onChange={(language) => setFilter('language', language)} />
           </div>
 
           <div>
