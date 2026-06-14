@@ -81,6 +81,7 @@ export function useIssues() {
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
   const debouncedSearch = useDebounce(filters.search, 400);
+  const labelsKey = filters.labels.join('|');
   const [issues, setIssues] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
   const [loading, setLoading] = useState(false);
@@ -152,7 +153,7 @@ export function useIssues() {
     return () => {
       active = false;
     };
-  }, [filters.language, filters.labels, filters.minStars, filters.sortBy, filters.page, filters.limit, debouncedSearch, requestNonce]);
+  }, [filters.language, labelsKey, filters.minStars, filters.sortBy, filters.page, filters.limit, debouncedSearch, requestNonce]);
 
   const visibleIssues = useMemo(
     () => filterLocally(issues, debouncedSearch, filters.labels),
