@@ -24,6 +24,23 @@ function parsePositiveInteger(value, name) {
   return parsed;
 }
 
+function parseNonNegativeInteger(value, name) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!/^\d+$/.test(String(value))) {
+    throw new AppError(`${name} must be a non-negative integer`, 400, 'INVALID_QUERY_PARAM');
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new AppError(`${name} must be a non-negative integer`, 400, 'INVALID_QUERY_PARAM');
+  }
+
+  return parsed;
+}
+
 function parseIssueSearchQuery(query) {
   const sortBy = query.sortBy ?? 'score';
 
@@ -33,7 +50,7 @@ function parseIssueSearchQuery(query) {
 
   const page = parsePositiveInteger(query.page, 'page') ?? 1;
   const requestedLimit = parsePositiveInteger(query.limit, 'limit') ?? 20;
-  const minStars = parsePositiveInteger(query.minStars, 'minStars');
+  const minStars = parseNonNegativeInteger(query.minStars, 'minStars');
 
   return {
     language: query.language ? String(query.language).trim() : undefined,
@@ -45,15 +62,10 @@ function parseIssueSearchQuery(query) {
   };
 }
 
-function issueSearchCacheKey(req) {
-  const parsed = parseIssueSearchQuery(req.query);
-  return `issues:${JSON.stringify(parsed)}`;
-}
-
 router.get(
   '/',
   issueSearchRateLimit(),
-  cacheMiddleware(10 * 60, issueSearchCacheKey),
+  cacheMiddleware(10 * 60),
   asyncHandler(async (req, res) => {
     const filters = parseIssueSearchQuery(req.query);
     const result = await searchIssues(filters);
