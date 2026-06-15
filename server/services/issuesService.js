@@ -1,17 +1,28 @@
-import { listIssues, getIssueById } from '../db/queries.js';
+import { getIssueById, listIssues } from '../db/queries.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 /**
- * Returns a paginated, filtered list of issues.
+ * Returns a paginated list of issues and pagination metadata.
  * @param {{language?: string, label?: string, minStars?: number, sortBy: 'score'|'stars'|'recent', page: number, limit: number}} filters
- * @returns {Promise<{data: Array<object>, total: number}>}
+ * @returns {Promise<{data: Array<object>, pagination: object}>}
  */
 export async function searchIssues(filters) {
-  return listIssues(filters);
+  const { data, total } = await listIssues(filters);
+  const totalPages = Math.ceil(total / filters.limit);
+
+  return {
+    data,
+    pagination: {
+      page: filters.page,
+      limit: filters.limit,
+      total,
+      totalPages
+    }
+  };
 }
 
 /**
- * Returns a single issue by id, or throws a 404 AppError if not found.
+ * Returns an issue by id or throws a 404.
  * @param {number} id Local issue id.
  * @returns {Promise<object>}
  */
@@ -19,7 +30,7 @@ export async function findIssue(id) {
   const issue = await getIssueById(id);
 
   if (!issue) {
-    throw new AppError(`Issue ${id} not found`, 404, 'NOT_FOUND');
+    throw new AppError('Issue not found', 404, 'ISSUE_NOT_FOUND');
   }
 
   return issue;
