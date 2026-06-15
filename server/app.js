@@ -16,10 +16,10 @@ app.get('/health', async (req, res) => {
   const checks = await Promise.allSettled([checkDbConnection(), checkRedisConnection()]);
   const database = checks[0].status === 'fulfilled';
   const redis = checks[1].status === 'fulfilled';
-  const healthy = database && redis;
+  const healthy = database;
 
   res.status(healthy ? 200 : 503).json({
-    status: healthy ? 'ok' : 'degraded',
+    status: database && redis ? 'ok' : 'degraded',
     checks: {
       database,
       redis
