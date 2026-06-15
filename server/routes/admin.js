@@ -11,7 +11,8 @@ router.post('/refresh', (req, res) => {
     return res.status(401).json({ error: { message: 'Unauthorized' } });
   }
 
-  const worker = spawn('python', ['worker/fetch_issues.py'], {
+  const pythonBin = process.env.PYTHON_BIN || 'python';
+  const worker = spawn(pythonBin, ['worker/fetch_issues.py'], {
     cwd: process.cwd(),
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe']

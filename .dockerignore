@@ -4,4 +4,5 @@ dist
 .venv
 .env
 server/.env
-worker
+__pycache__
+*.pyc
