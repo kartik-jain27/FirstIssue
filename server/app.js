@@ -3,6 +3,7 @@ import express from 'express';
 import { checkDbConnection } from './db/pool.js';
 import { checkRedisConnection } from './middleware/cache.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import adminRouter from './routes/admin.js';
 import issuesRouter from './routes/issues.js';
 import reposRouter from './routes/repos.js';
 import statsRouter from './routes/stats.js';
@@ -27,6 +28,7 @@ app.get('/health', async (req, res) => {
   });
 });
 
+app.use('/api/admin', adminRouter);
 app.use('/api/issues', issuesRouter);
 app.use('/api/repos', reposRouter);
 app.use('/api/stats', statsRouter);
