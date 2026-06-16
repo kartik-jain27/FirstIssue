@@ -81,6 +81,36 @@ export function cacheMiddleware(ttlSeconds, keyBuilder = defaultKeyBuilder) {
 }
 
 /**
+ * Deletes known response cache keys and matching cache key patterns.
+ * @param {string[]} keys Exact Redis keys to delete.
+ * @param {string[]} patterns Redis SCAN patterns to delete.
+ * @returns {Promise<number>} Number of deleted keys.
+ */
+export async function clearResponseCache(keys = [], patterns = []) {
+  await ensureRedisConnection();
+  let deleted = 0;
+
+  if (keys.length > 0) {
+    deleted += await redis.del(...keys);
+  }
+
+  for (const pattern of patterns) {
+    let cursor = '0';
+
+    do {
+      const [nextCursor, matchedKeys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+
+      if (matchedKeys.length > 0) {
+        deleted += await redis.del(...matchedKeys);
+      }
+    } while (cursor !== '0');
+  }
+
+  return deleted;
+}
+
+/**
  * Verifies Redis connectivity.
  * @returns {Promise<boolean>}
  */

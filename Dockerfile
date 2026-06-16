@@ -3,6 +3,7 @@ FROM node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PYTHONUNBUFFERED=1
+ENV PYTHON_BIN=/opt/venv/bin/python
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN apt-get update \
