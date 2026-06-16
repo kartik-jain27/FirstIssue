@@ -10,13 +10,29 @@ The app has a React/Vite frontend, a Node.js/Express REST API, PostgreSQL storag
 - Backend API: `https://firstissue-production.up.railway.app/api`
 - Backend health: `https://firstissue-production.up.railway.app/health`
 
+## Current Production Status
+
+The production app is running end to end:
+
+- React frontend is deployed on Vercel.
+- Express backend is deployed on Railway.
+- PostgreSQL and Redis health checks pass.
+- The Python worker runs inside the Railway container.
+- Protected admin refresh returns a tracked `runId`.
+- Worker refresh status is stored in Redis.
+- Redis locking prevents overlapping worker runs.
+- Successful worker runs clear issue, stats, and trending repository caches.
+- Labels are normalized to lowercase for filtering and stats aggregation.
+
+The latest verified worker run completed successfully with exit code `0` and upserted more than 2,000 issues. The worker currently targets 58 repositories across JavaScript, TypeScript, Python, Go, Rust, Java, C++, and GSoC-relevant organizations. `totalRepos` in stats means repositories that currently have stored matching issues, not the number of repositories configured for crawling.
+
 ## Tech Stack
 
 - React 18 + Vite + Tailwind CSS
 - Node.js 20+ + Express
 - PostgreSQL with `pg`
 - Redis with `ioredis`
-- Python worker using `requests`, `psycopg2`, and APScheduler
+- Python worker using `requests`, `psycopg`, and APScheduler
 - Railway for the backend
 - Vercel for the frontend
 
@@ -66,6 +82,7 @@ PORT=3000
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/good_first_issues
 REDIS_URL=redis://localhost:6379
 GITHUB_TOKEN=ghp_replace_with_your_token
+ADMIN_SECRET=replace_with_admin_refresh_secret
 CORS_ORIGIN=http://localhost:5173
 ```
 
@@ -200,8 +217,8 @@ Response shape:
   "pagination": {
     "page": 1,
     "limit": 20,
-    "total": 547,
-    "totalPages": 28
+    "total": 2102,
+    "totalPages": 106
   }
 }
 ```
@@ -224,20 +241,25 @@ GET /api/repos/trending
 GET /api/stats
 ```
 
-Returns:
+Returns aggregate issue counts, language distribution, repository count, latest fetch timestamp, and normalized top labels:
 
 ```json
 {
-  "totalIssues": 547,
+  "totalIssues": 2102,
   "issuesByLanguage": {
-    "Go": 273,
-    "Python": 203,
-    "JavaScript": 68,
-    "TypeScript": 3
+    "Go": 811,
+    "TypeScript": 553,
+    "Python": 294,
+    "JavaScript": 180,
+    "Ruby": 138,
+    "Java": 126
   },
-  "totalRepos": 12,
-  "lastUpdated": "2026-06-14T13:07:14.986Z",
-  "topLabels": []
+  "totalRepos": 29,
+  "lastUpdated": "2026-06-16T05:19:26.183Z",
+  "topLabels": [
+    { "label": "help wanted", "count": 1921 },
+    { "label": "bug", "count": 457 }
+  ]
 }
 ```
 
@@ -252,7 +274,7 @@ Returns:
 
 ### Backend on Railway
 
-The backend deploys from the repo root using `Dockerfile` and `railway.toml`.
+The backend deploys from the repo root using `Dockerfile`. The Docker image installs Node.js dependencies, Python, a Python virtual environment, and the worker dependencies so the refresh endpoint can run `worker/fetch_issues.py` in production.
 
 Required Railway variables:
 
@@ -260,6 +282,7 @@ Required Railway variables:
 DATABASE_URL=postgres://...
 REDIS_URL=rediss://default:password@host.upstash.io:6379
 GITHUB_TOKEN=ghp_replace_with_your_token
+ADMIN_SECRET=replace_with_admin_refresh_secret
 NODE_ENV=production
 ```
 
@@ -273,7 +296,6 @@ Railway settings:
 
 ```text
 Root Directory: empty
-Railway Config File: /railway.toml
 Build Command: empty
 Start Command: empty
 Healthcheck Path: /health
@@ -290,6 +312,58 @@ Do not paste:
 ```text
 REDIS_URL="rediss://..."
 ```
+
+
+### Production Worker Refresh
+
+The production worker is triggered through a protected admin endpoint. Cron-job.org can call this endpoint every 6 hours.
+
+Start a refresh:
+
+```bash
+curl -X POST \
+  https://firstissue-production.up.railway.app/api/admin/refresh \
+  -H "x-admin-secret: YOUR_ADMIN_SECRET"
+```
+
+Successful response:
+
+```json
+{
+  "message": "Worker started",
+  "runId": "9945e5f3-4776-4498-9945-b2a44b621976"
+}
+```
+
+Check refresh status:
+
+```bash
+curl -X GET \
+  https://firstissue-production.up.railway.app/api/admin/refresh/status \
+  -H "x-admin-secret: YOUR_ADMIN_SECRET"
+```
+
+Status response after a successful run:
+
+```json
+{
+  "running": false,
+  "activeRunId": null,
+  "status": {
+    "state": "success",
+    "exitCode": 0,
+    "error": null
+  }
+}
+```
+
+Refresh behavior:
+
+- Requests without the correct `x-admin-secret` return `401`.
+- If a refresh is already running, the endpoint returns `409`.
+- The worker status is stored in Redis.
+- A successful run clears cached stats, trending repositories, and issue search results.
+- Python logging appears in `stderr` by default; that does not mean the worker failed.
 
 ### Frontend on Vercel
 
@@ -321,6 +395,16 @@ curl https://firstissue-production.up.railway.app/api/stats
 curl "https://firstissue-production.up.railway.app/api/issues?limit=1"
 curl "https://firstissue-production.up.railway.app/api/issues?language=JavaScript&label=good%20first%20issue&minStars=0&sortBy=score&page=1&limit=3"
 curl https://firstissue-production.up.railway.app/api/repos/trending
+curl -X POST https://firstissue-production.up.railway.app/api/admin/refresh
+# Expected without secret: 401 Unauthorized
+```
+
+Protected worker checks:
+
+```bash
+curl -X GET \
+  https://firstissue-production.up.railway.app/api/admin/refresh/status \
+  -H "x-admin-secret: YOUR_ADMIN_SECRET"
 ```
 
 Frontend:
@@ -341,6 +425,26 @@ Manual browser checks:
 - Bookmarks persist after refresh.
 - Dark/light mode toggle works.
 - Browser console has no API or CORS errors.
+
+
+## Project Status Report
+
+Claude's recent review was directionally useful but partly stale:
+
+- It correctly identified that production usefulness depends on fresh issue data.
+- It was stale about Railway not being able to run Python; the current Dockerfile includes Python and worker dependencies.
+- It was stale about the worker not being triggered on Railway; the admin refresh endpoint has been verified with a successful production worker run.
+- It was stale about the repository expansion not being committed; `worker/config.py` contains the expanded target list.
+- It correctly suggested improving production reliability, which is now handled through worker status tracking, Redis locking, and cache invalidation.
+
+Remaining production improvements worth considering later:
+
+- Rotate any secrets that were pasted into chat or screenshots.
+- Add a small admin UI for worker status instead of using curl.
+- Mark or remove issues that later close on GitHub.
+- Add a user-facing repo suggestion flow.
+- Add automated tests for API validation, admin auth, worker normalization, and stats queries.
+- Add monitoring or alerts for failed worker runs.
 
 ## Security Notes
 
