@@ -64,7 +64,7 @@ function filterLocally(issues, search, labels) {
       !query ||
       issue.title.toLowerCase().includes(query) ||
       issue.repoName.toLowerCase().includes(query) ||
-      issueLabels.some((label) => label.toLowerCase().includes(query));
+      issueLabels.some((label) => normalizeLabel(label).includes(query));
 
     const matchesLabels =
       labels.length === 0 || labels.some((selectedLabel) => issueLabels.some((issueLabel) => labelsMatch(selectedLabel, issueLabel)));

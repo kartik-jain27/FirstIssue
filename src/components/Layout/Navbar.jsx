@@ -96,7 +96,7 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <a
-            href="https://github.com"
+            href="https://github.com/kartik-jain27/FirstIssue"
             target="_blank"
             rel="noreferrer"
             className="focus-ring hidden rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 dark:border-slate-800 dark:text-slate-300 dark:hover:border-indigo-800 dark:hover:text-indigo-300 sm:inline-flex"
