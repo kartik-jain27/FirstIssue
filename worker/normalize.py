@@ -32,7 +32,11 @@ def compute_activity_score(updated_at, comments_count):
 
 
 def normalize_issue(issue, repo_metadata, fallback_language):
-    labels = [label["name"] for label in issue.get("labels", []) if label.get("name")]
+    labels = [
+        label["name"].strip().lower()
+        for label in issue.get("labels", [])
+        if label.get("name") and label["name"].strip()
+    ]
     updated_at = parse_github_timestamp(issue.get("updated_at"))
     comments_count = issue.get("comments", 0)
 

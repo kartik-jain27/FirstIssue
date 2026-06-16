@@ -17,7 +17,7 @@ function buildIssueFilters(filters) {
 
   if (filters.label) {
     values.push(filters.label);
-    clauses.push(`$${values.length} = ANY(labels)`);
+    clauses.push(`EXISTS (SELECT 1 FROM unnest(labels) AS label WHERE LOWER(label) = LOWER($${values.length}))`);
   }
 
   if (filters.minStars !== undefined) {
@@ -57,7 +57,7 @@ export async function listIssues(filters) {
         title,
         issue_url AS "issueUrl",
         language,
-        labels,
+        ARRAY(SELECT LOWER(label) FROM unnest(labels) AS label) AS labels,
         comments_count AS "commentsCount",
         created_at AS "createdAt",
         updated_at AS "updatedAt",
@@ -95,7 +95,7 @@ export async function getIssueById(id) {
         title,
         issue_url AS "issueUrl",
         language,
-        labels,
+        ARRAY(SELECT LOWER(label) FROM unnest(labels) AS label) AS labels,
         comments_count AS "commentsCount",
         created_at AS "createdAt",
         updated_at AS "updatedAt",
@@ -151,9 +151,9 @@ export async function getStats() {
       ORDER BY count DESC, language ASC
     `),
     query(`
-      SELECT label, COUNT(*)::int AS count
+      SELECT LOWER(label) AS label, COUNT(*)::int AS count
       FROM issues, unnest(labels) AS label
-      GROUP BY label
+      GROUP BY LOWER(label)
       ORDER BY count DESC, label ASC
       LIMIT 10
     `)
