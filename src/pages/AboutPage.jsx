@@ -50,7 +50,7 @@ export default function AboutPage() {
           </div>
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <ShieldCheck className="mb-3 text-emerald-600 dark:text-emerald-300" />
-            <h2 className="font-bold text-slate-950 dark:text-white">Recruiter-ready UI</h2>
+            <h2 className="font-bold text-slate-950 dark:text-white">Search & Analytics UI</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
               Presents search, filters, trend data, and issue cards in a polished interface.
             </p>
